@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prognosa & Simulasi JPL + Kopdeskel Merah Putih — Kaltim & Kaltara (Jul-Agu-Sep 2026)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+
+:root{
+  --bg:            #0B1614;
+  --bg-grid:       #0E1C19;
+  --panel:         #122220;
+  --panel-alt:     #182B28;
+  --panel-raised:  #1D332F;
+  --hairline:      #294540;
+  --hairline-soft: #1E3833;
+  --text:          #EDE9DD;
+  --text-dim:      #A9BDB5;
+  --text-faint:    #6E867D;
+  --brand:         #5FA88B;
+  --brand-soft:    #3E7864;
+  --mode-truck:    #5FA88B;
+  --mode-kapal:    #4E9BC4;
+  --mode-pesawat:  #A788D6;
+  --risk-low:      #4C9A6E;
+  --risk-low-bg:   rgba(76,154,110,0.14);
+  --risk-med:      #D6A23C;
+  --risk-med-bg:   rgba(214,162,60,0.14);
+  --risk-high:     #C24A3B;
+  --risk-high-bg:  rgba(194,74,59,0.16);
+  --accent-mp:     #D6603C;
+  --accent-mp-bg:  rgba(214,96,60,0.14);
+  --scenario-a:    #4E9BC4;
+  --scenario-b:    #C24A3B;
+  --scenario-c:    #6E867D;
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 16px;
+  --font-display: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+  --font-body: 'IBM Plex Sans', -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@font-face{font-family:'Space Grotesk';src:local('Space Grotesk');}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(ellipse 1200px 700px at 85% -10%, rgba(95,168,139,0.10), transparent 60%),
+    radial-gradient(ellipse 900px 600px at 5% 10%, rgba(214,96,60,0.07), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;} }
+a{color:var(--brand);}
+h1,h2,h3{font-family:var(--font-display); font-weight:600; margin:0; letter-spacing:-0.01em;}
+.mono{font-family:var(--font-mono);}
+#app{max-width:1360px; margin:0 auto; padding:0 24px 72px;}
+
+.masthead{padding:44px 0 24px; border-bottom:1px solid var(--hairline-soft);}
+.eyebrow{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:var(--font-mono); font-size:12px; letter-spacing:0.14em;
+  text-transform:uppercase; color:var(--brand);
+  padding:4px 10px; border:1px solid var(--hairline); border-radius:999px;
+  background:var(--panel-alt);
+}
+.eyebrow::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--risk-low); box-shadow:0 0 0 3px var(--risk-low-bg);}
+.eyebrow.warn::before{background:var(--risk-high); box-shadow:0 0 0 3px var(--risk-high-bg);}
+.eyebrow.warn{color:var(--risk-high);}
+.masthead h1{font-size:clamp(26px,3.6vw,40px); line-height:1.1; margin-top:14px; max-width:22ch;}
+.masthead .lede{max-width:70ch; color:var(--text-dim); font-size:15px; margin-top:12px;}
+.manifest-strip{margin-top:24px; display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:var(--hairline-soft); border:1px solid var(--hairline-soft); border-radius:var(--radius-m); overflow:hidden;}
+.manifest-cell{background:var(--panel); padding:14px 16px;}
+.manifest-cell .k{font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-faint);}
+.manifest-cell .v{font-family:var(--font-mono); font-size:19px; margin-top:4px; font-weight:600;}
+.manifest-cell .v.high{color:var(--risk-high);}
+.manifest-cell .v.warn{color:var(--risk-med);}
+
+.alertbox{margin-top:20px; border:1px solid var(--risk-high); background:var(--risk-high-bg); border-radius:var(--radius-m); padding:16px 18px; display:flex; gap:12px; align-items:flex-start;}
+.alertbox .dot{width:9px;height:9px;border-radius:50%;background:var(--risk-high); margin-top:6px; flex-shrink:0; box-shadow:0 0 0 4px rgba(194,74,59,0.18);}
+.alertbox b{color:var(--risk-high);}
+.alertbox p{margin:4px 0 0; color:var(--text-dim); font-size:13.5px; line-height:1.55;}
+
+.tabbar{display:flex; gap:4px; margin-top:28px; border-bottom:1px solid var(--hairline-soft); overflow-x:auto;}
+.tabbtn{font-family:var(--font-body); font-size:13.5px; font-weight:500; color:var(--text-faint); background:none; border:none; padding:11px 16px; cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; transition:color .15s;}
+.tabbtn:hover{color:var(--text-dim);}
+.tabbtn.active{color:var(--text); border-bottom-color:var(--brand);}
+.tabpanel{display:none; padding-top:28px;}
+.tabpanel.active{display:block;}
+
+.section-head{margin-bottom:14px;}
+.section-head h2{font-size:20px;}
+.section-head p.sub{color:var(--text-dim); font-size:13.5px; margin-top:6px; max-width:76ch;}
+
+.card{background:var(--panel); border:1px solid var(--hairline-soft); border-radius:var(--radius-m); padding:18px 20px;}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+@media (max-width:820px){ .grid2,.grid3{grid-template-columns:1fr;} }
+
+.kpi-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:22px;}
+.kpi{background:var(--panel); border:1px solid var(--hairline-soft); border-radius:var(--radius-m); padding:16px 18px;}
+.kpi .k{font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--text-faint);}
+.kpi .v{font-family:var(--font-mono); font-size:22px; font-weight:600; margin-top:6px;}
+.kpi .d{font-size:12px; color:var(--text-dim); margin-top:4px;}
+
+.scenario-bars{margin-top:8px;}
+.sbar-row{display:grid; grid-template-columns:180px 1fr 150px; align-items:center; gap:14px; padding:10px 0; border-bottom:1px solid var(--hairline-soft);}
+.sbar-row:last-child{border-bottom:none;}
+.sbar-label{font-size:13px; color:var(--text-dim);}
+.sbar-track{background:var(--panel-alt); border-radius:4px; height:20px; overflow:hidden; position:relative;}
+.sbar-fill{height:100%; border-radius:4px 0 0 4px;}
+.sbar-val{font-family:var(--font-mono); font-size:13px; text-align:right;}
+
+table{width:100%; border-collapse:collapse; font-size:13px;}
+thead th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); font-weight:500; padding:9px 10px; border-bottom:1px solid var(--hairline); position:sticky; top:0; background:var(--panel); cursor:pointer; white-space:nowrap;}
+thead th:hover{color:var(--text-dim);}
+tbody td{padding:9px 10px; border-bottom:1px solid var(--hairline-soft); color:var(--text-dim); vertical-align:top;}
+tbody tr:hover{background:var(--panel-alt);}
+.tablewrap{max-height:560px; overflow:auto; border:1px solid var(--hairline-soft); border-radius:var(--radius-m); background:var(--panel);}
+.num{font-family:var(--font-mono); text-align:right; white-space:nowrap;}
+
+.pill{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; letter-spacing:.02em;}
+.pill.rendah{background:var(--risk-low-bg); color:var(--risk-low);}
+.pill.sedang{background:var(--risk-med-bg); color:var(--risk-med);}
+.pill.tinggi{background:var(--risk-high-bg); color:var(--risk-high);}
+.pill.siap{background:var(--risk-low-bg); color:var(--risk-low);}
+.pill.berkembang{background:var(--risk-med-bg); color:var(--risk-med);}
+.pill.belumsiap{background:var(--risk-high-bg); color:var(--risk-high);}
+.pill.moda-truck{background:rgba(95,168,139,0.14); color:var(--mode-truck);}
+.pill.moda-kapal{background:rgba(78,155,196,0.14); color:var(--mode-kapal);}
+.pill.moda-pesawat{background:rgba(167,136,214,0.14); color:var(--mode-pesawat);}
+.pill.tier1{background:var(--risk-low-bg); color:var(--risk-low);}
+.pill.tier1b{background:var(--risk-med-bg); color:var(--risk-med);}
+.pill.tier2{background:rgba(78,155,196,0.14); color:var(--mode-kapal);}
+.pill.tier3{background:var(--risk-high-bg); color:var(--risk-high);}
+
+.filter-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+.filter-row select, .filter-row input{background:var(--panel-alt); border:1px solid var(--hairline); color:var(--text); border-radius:var(--radius-s); padding:7px 10px; font-family:var(--font-body); font-size:13px;}
+
+#map{height:440px; border-radius:var(--radius-m); border:1px solid var(--hairline-soft); margin-bottom:20px;}
+.leaflet-popup-content-wrapper{background:var(--panel-raised); color:var(--text); border-radius:var(--radius-s);}
+.leaflet-popup-tip{background:var(--panel-raised);}
+.popup-title{font-family:var(--font-display); font-weight:600; font-size:14px; margin-bottom:6px;}
+.popup-row{font-size:12px; color:var(--text-dim); margin-top:2px;}
+
+.timeline{display:flex; flex-direction:column; gap:0; margin-top:6px;}
+.tstage{display:grid; grid-template-columns:150px 1fr; gap:16px; padding:16px 0; border-bottom:1px solid var(--hairline-soft);}
+.tstage:last-child{border-bottom:none;}
+.tstage .when{font-family:var(--font-mono); font-size:12.5px; color:var(--brand);}
+.tstage h3{font-size:15px; margin-bottom:6px;}
+.tstage p{font-size:13px; color:var(--text-dim); margin:0;}
+
+.benefit-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;}
+@media (max-width:820px){.benefit-grid{grid-template-columns:1fr;}}
+.benefit-card{border-radius:var(--radius-m); padding:18px 20px; border:1px solid var(--hairline-soft);}
+.benefit-card.pos{background:var(--risk-low-bg); border-color:rgba(76,154,110,0.35);}
+.benefit-card.neg{background:var(--risk-high-bg); border-color:rgba(194,74,59,0.35);}
+.benefit-card h3{font-size:14px; margin-bottom:10px;}
+.benefit-card.pos h3{color:var(--risk-low);}
+.benefit-card.neg h3{color:var(--risk-high);}
+.benefit-card ol{margin:0; padding-left:18px; font-size:13px; color:var(--text-dim); line-height:1.6;}
+.benefit-card li{margin-bottom:8px;}
+.benefit-card li b{color:var(--text);}
+
+.confidence{display:inline-block; font-size:10.5px; padding:1px 7px; border-radius:4px; margin-right:6px; font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
+.confidence.tinggi{background:var(--risk-low-bg); color:var(--risk-low);}
+.confidence.sedang{background:var(--risk-med-bg); color:var(--risk-med);}
+.confidence.rendah{background:var(--risk-high-bg); color:var(--risk-high);}
+
+.methcard{margin-bottom:16px;}
+.methcard h3{font-size:14.5px; margin-bottom:8px;}
+.methcard p, .methcard li{font-size:13px; color:var(--text-dim); line-height:1.65;}
+.methcard ul{padding-left:18px; margin:8px 0;}
+
+.btnrow{display:flex; gap:10px; flex-wrap:wrap; margin-top:24px;}
+.btn{font-family:var(--font-body); font-size:13px; font-weight:500; color:var(--text); background:var(--panel-raised); border:1px solid var(--hairline); border-radius:var(--radius-s); padding:10px 16px; cursor:pointer; transition:border-color .15s;}
+.btn:hover{border-color:var(--brand);}
+.btn.ghost{background:transparent;}
+
+footer{margin-top:48px; padding-top:20px; border-top:1px solid var(--hairline-soft); color:var(--text-faint); font-size:12px; line-height:1.7;}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="masthead">
+    <span class="eyebrow warn">● Penyaluran serentak berjalan sejak 17 Agu 2026</span>
+    <h1>Prognosa &amp; Simulasi Distribusi JPL + Keterlibatan Kopdeskel Merah Putih</h1>
+    <p class="lede">Kalimantan Timur &amp; Kalimantan Utara — alokasi CPP Bantuan Pangan Beras Tahap II, Juli–Agustus–September 2026. Simulasi rute, biaya transporter JPL (3 skenario), dan kelayakan Koperasi Desa/Kelurahan Merah Putih sebagai mitra titik bagi, dibangun dari data aktual &amp; hasil reviu APIP Feb–Mar 2026.</p>
+
+    <div class="manifest-strip">
+      <div class="manifest-cell"><div class="k">Total PBP (estimasi)</div><div class="v">323,829</div></div>
+      <div class="manifest-cell"><div class="k">Beras disalurkan (sim.)</div><div class="v">9,714,870 kg</div></div>
+      <div class="manifest-cell"><div class="k">Rute risiko tinggi</div><div class="v high">5 dari 23</div></div>
+      <div class="manifest-cell"><div class="k">Skenario A (kontrak tetap)</div><div class="v">Rp 13.82 M</div></div>
+      <div class="manifest-cell"><div class="k">vs total kontrak Feb-Mar</div><div class="v warn">+24.4%</div></div>
+    </div>
+
+    <div class="alertbox">
+      <div class="dot"></div>
+      <div>
+        <b>Krisis aktual: Sungai Mahakam surut akibat kemarau/El Niño (per Agustus 2026).</b>
+        <p>Debit turun 5–6 meter dari normal; kapal besar tidak lagi mencapai Mahakam Ulu, muatan dipindah ke kapal lebih kecil di Long Iram, dan biaya angkut Samarinda–Mahulu dilaporkan naik dua kali lipat. Ini memengaruhi langsung 3 rute kapal JPL (Mahakam Ulu, Tering/Long Iram, dan sekitarnya) yang sedang dijadwalkan pada periode ini — lihat tab Rute &amp; Peta.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <button class="tabbtn active" data-tab="ringkasan">Ringkasan</button>
+    <button class="tabbtn" data-tab="rute">Peta &amp; Simulasi Rute</button>
+    <button class="tabbtn" data-tab="kdmp">Kopdeskel Merah Putih</button>
+    <button class="tabbtn" data-tab="jadwal">Jadwal &amp; Rekomendasi</button>
+    <button class="tabbtn" data-tab="metodologi">Metodologi &amp; Keterbatasan</button>
+  </div>
+
+  <!-- ================= TAB: RINGKASAN ================= -->
+  <div class="tabpanel active" id="tab-ringkasan">
+    <div class="section-head">
+      <h2>Ikhtisar simulasi biaya transporter</h2>
+      <p class="sub">Kontrak JPL Bulog resmi untuk periode Jul-Sep 2026 belum tersedia. Empat angka di bawah adalah <b>simulasi</b>, dibangun dari tarif flat Rp/kg hasil aktual Feb-Mar 2026 dan pola audit historis Feb-Mar 2026 (lihat tab Metodologi).</p>
+    </div>
+    <div id="kpiRow" class="kpi-row"></div>
+
+    <div class="grid2" style="margin-bottom:20px;">
+      <div class="card">
+        <h3 style="font-size:15px;margin-bottom:12px;">Perbandingan skenario biaya (Kaltim + Kaltara)</h3>
+        <div id="scenarioBars" class="scenario-bars"></div>
+        <p style="font-size:12px;color:var(--text-faint);margin-top:12px;">Skenario B bukan proyeksi biaya yang disarankan — ini adalah peringatan eksposur finansial jika pola pengajuan at-cost Feb-Mar (jauh melebihi kontrak, khususnya Kaltara) terulang. Skenario C menunjukkan nilai yang historisnya benar-benar bertahan setelah reviu APIP.</p>
+      </div>
+      <div class="card">
+        <h3 style="font-size:15px;margin-bottom:12px;">Indeks kesehatan pertanggungjawaban at-cost (Feb-Mar 2026, per Dummy.xls)</h3>
+        <div id="provCards" class="grid2" style="gap:12px;"></div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>Temuan utama</h2>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <span class="confidence tinggi">Berdasar data resmi</span>
+        <p style="margin-top:10px;font-size:13.5px;color:var(--text-dim);">Kaltara adalah satu dari empat provinsi se-Indonesia dengan pengajuan at-cost JPL <b style="color:var(--text)">melebihi nilai kontrak</b> (+168,4%) pada Feb-Mar 2026 — penyimpangan terbesar di antara provinsi Kalimantan-Kalimantan lain. Pasca-konfirmasi, <b style="color:var(--text)">85,3% nilai pengajuan Kaltara masih belum terverifikasi</b>, jauh berbeda dari Kaltim yang sudah 98,7% terverifikasi.</p>
+      </div>
+      <div class="card">
+        <span class="confidence tinggi">Cross-referensi risiko × kesiapan KDKMP</span>
+        <p style="margin-top:10px;font-size:13.5px;color:var(--text-dim);">Nunukan dan Kutai Barat — rumah bagi <b style="color:var(--text)">5 dari 5 rute berisiko tertinggi</b> di seluruh jaringan (Krayan, Sebatik, Lumbis Hulu, Tering/Long Iram, Penyinggahan/Muara Pahu) — justru memiliki sinyal kesiapan kelembagaan Koperasi Merah Putih <b style="color:var(--text)">paling lemah</b> di provinsi masing-masing. Lihat tab Kopdeskel Merah Putih.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB: RUTE & PETA ================= -->
+  <div class="tabpanel" id="tab-rute">
+    <div class="section-head">
+      <h2>Peta rute &amp; titik prioritas</h2>
+      <p class="sub">Ukuran &amp; warna penanda mengikuti skor risiko gagal-salur. Klik penanda untuk rincian simulasi Jul-Sep 2026.</p>
+    </div>
+    <div id="map"></div>
+
+    <div class="section-head">
+      <h2>Papan rute — simulasi kuantum &amp; biaya Jul-Sep 2026</h2>
+      <p class="sub">Jaringan 23 rute vendor JPL Bulog (tidak berubah dari Feb-Mar 2026) dengan kuantum &amp; biaya disimulasikan ulang untuk periode baru (30 kg beras/PBP, tanpa migor).</p>
+    </div>
+    <div class="filter-row">
+      <select id="filterModa">
+        <option value="all">Semua moda</option>
+        <option value="Truck">Truk</option>
+        <option value="Kapal">Kapal</option>
+        <option value="Pesawat">Pesawat Terbang</option>
+      </select>
+      <select id="filterRisk">
+        <option value="all">Semua kategori risiko</option>
+        <option value="Tinggi">Tinggi</option>
+        <option value="Sedang">Sedang</option>
+        <option value="Rendah">Rendah</option>
+      </select>
+      <span id="routeCount" class="mono" style="align-self:center;color:var(--text-faint);font-size:12.5px;"></span>
+    </div>
+    <div class="tablewrap">
+      <table id="routeTable">
+        <thead>
+          <tr>
+            <th data-key="id">ID</th>
+            <th data-key="wilayah_label">Wilayah</th>
+            <th data-key="vendor">Vendor</th>
+            <th data-key="moda_angkutan">Moda</th>
+            <th data-key="skor_risiko">Risiko</th>
+            <th data-key="pbp_alokasi_estimasi">PBP (est.)</th>
+            <th data-key="beras_kg_simulasi_juli_sep_2026">Beras kg (sim.)</th>
+            <th data-key="biaya_transporter_skenario_A_kontrak_tetap">Biaya Skenario A</th>
+            <th data-key="biaya_transporter_skenario_A_disesuaikan_kemarau">A + Kemarau</th>
+            <th>Dampak Kemarau</th>
+            <th>Jadwal usulan penyaluran (Agu-Sep-Okt 2026)</th>
+          </tr>
+        </thead>
+        <tbody id="routeTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= TAB: KDMP ================= -->
+  <div class="tabpanel" id="tab-kdmp">
+    <div class="section-head">
+      <h2>Kesiapan Kopdeskel Merah Putih (KDKMP) sebagai mitra titik bagi</h2>
+      <p class="sub">Bapanas membuka opsi KDKMP sebagai titik penyaluran bila fasilitas memadai — bukan kewajiban seluruh unit. Tabel di bawah menyandingkan sinyal kesiapan operasional dengan skor risiko rute di kabupaten/kota yang sama.</p>
+    </div>
+
+    <div class="section-head"><h2 style="font-size:16px;">Matriks risiko rute × kesiapan KDKMP × rekomendasi program</h2></div>
+    <div class="tablewrap" style="max-height:420px;margin-bottom:26px;">
+      <table>
+        <thead><tr><th>Kabupaten/Kota</th><th>Kategori Risiko Rute</th><th>Skor Maks</th><th>Tier Kesiapan KDKMP</th><th>Rekomendasi Program</th></tr></thead>
+        <tbody id="tieringTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid2" style="margin-bottom:26px;">
+      <div>
+        <h3 style="font-size:14.5px;margin-bottom:10px;">Kalimantan Timur — transaksi riil SIMKOPDES 2026 <span class="confidence tinggi" style="margin-left:6px;">27 Jul 2026</span></h3>
+        <div class="tablewrap" style="max-height:340px;">
+          <table>
+            <thead><tr><th>Kab/Kota</th><th>Transaksi 2026 (Rp)</th><th>Tier</th><th>Catatan</th></tr></thead>
+            <tbody id="kdmpKaltimTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size:14.5px;margin-bottom:10px;">Kalimantan Utara — legalitas NIK KDKMP <span class="confidence rendah" style="margin-left:6px;">data Jul 2025, perlu konfirmasi ulang</span></h3>
+        <div class="tablewrap" style="max-height:340px;">
+          <table>
+            <thead><tr><th>Kab/Kota</th><th>NIK</th><th>Jml Desa</th><th>Rasio</th><th>Tier</th><th>Catatan</th></tr></thead>
+            <tbody id="kdmpKaltaraTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-head"><h2>Nilai manfaat, keuntungan &amp; kerugian keterlibatan KDKMP di titik bagi</h2></div>
+    <div class="benefit-grid">
+      <div class="benefit-card pos">
+        <h3>KEUNTUNGAN &amp; NILAI MANFAAT</h3>
+        <ol>
+          <li><b>Memangkas jarak last-mile</b> — KDKMP dekat permukiman mengurangi beban perjalanan PBP, sesuai rasional resmi Bapanas.</li>
+          <li><b>Memanfaatkan infrastruktur yang sudah dibangun</b> — gudang/gerai KDKMP adalah sunk cost program nasional, bukan investasi baru.</li>
+          <li><b>Mengurangi konsentrasi risiko vendor tunggal</b> — satu entitas "JPL Bulog" melayani seluruh Kaltim, Kaltara, dan Riau Kepri; KDKMP menambah redundansi kelembagaan.</li>
+          <li><b>Efek pengganda ekonomi lokal</b> — aktivitas titik bagi tetap berputar di ekonomi desa.</li>
+          <li><b>Momentum digitalisasi</b> — integrasi SIMKOPDES berpotensi memperbaiki kelemahan dokumentasi BAST yang jadi temuan besar di Kaltara.</li>
+        </ol>
+      </div>
+      <div class="benefit-card neg">
+        <h3>KERUGIAN &amp; RISIKO</h3>
+        <ol>
+          <li><b>Ketidaksesuaian kebutuhan-kesiapan</b> — wilayah risiko tertinggi (Nunukan, Kutai Barat, Mahakam Ulu) justru KDKMP-nya paling belum siap.</li>
+          <li><b>Imaturitas kapasitas</b> — mayoritas unit belum punya rekam jejak menangani volume besar bertenggat ketat.</li>
+          <li><b>Kesenjangan infrastruktur fisik</b> — kriteria "gudang cukup besar" belum tentu terpenuhi meski unit sudah aktif bertransaksi.</li>
+          <li><b>Memperbesar celah pertanggungjawaban</b> — menambah titik penyaluran baru tanpa SOP BAST jelas berisiko menambah kasus ketidaktepatan sasaran.</li>
+          <li><b>Friksi kontraktual</b> — PKS JPL eksisting mencakup distribusi hingga titik bagi; perlu kejelasan baru soal akuntabilitas serah-terima.</li>
+          <li><b>Risiko tata kelola desa baru</b> — pengurus baru, pengawasan internal belum teruji.</li>
+          <li><b>Risiko sequencing</b> — KDKMP paling siap justru di kab/kota berisiko rendah; jangan sampai pilot hanya menyentuh yang sudah mudah.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB: JADWAL ================= -->
+  <div class="tabpanel" id="tab-jadwal">
+    <div class="section-head">
+      <h2>Usulan jadwal — jendela operasional Jul-Sep 2026</h2>
+      <p class="sub">Berbeda dari Feb-Mar 2026 (jendela ±8 minggu), penyaluran Tahap II sudah dimulai serentak 17 Agustus 2026. Usulan berikut bersifat "mengejar sisa jendela", bukan perencanaan dari nol.</p>
+    </div>
+    <div class="timeline">
+      <div class="tstage">
+        <div class="when">18–24 Agu 2026<br><span class="pill tinggi" style="margin-top:6px;">Darurat / berjalan</span></div>
+        <div><h3>5 rute risiko tertinggi</h3><p>Krayan (pesawat), Sebatik (kapal), Lumbis Hulu dkk (kapal), Tering/Long Iram/Mook Manaar Bulatn (kapal), Penyinggahan/Muara Pahu (kapal) — dieksekusi lebih dulu selagi sisa jendela masih ada.</p></div>
+      </div>
+      <div class="tstage">
+        <div class="when">25 Agu – 7 Sep 2026<br><span class="pill sedang" style="margin-top:6px;">Prioritas kemarau</span></div>
+        <div><h3>Rute sungai Mahakam terdampak El Niño</h3><p>Mahakam Ulu (krisis aktif), Muara Wis &amp; Muara Muntai (Kukar) — makin lama ditunda, makin besar risiko muka air terus turun.</p></div>
+      </div>
+      <div class="tstage">
+        <div class="when">8–28 Sep 2026<br><span class="pill rendah" style="margin-top:6px;">Reguler</span></div>
+        <div><h3>15 rute truk (mayoritas jaringan)</h3><p>Risiko rendah, moda redundan — dapat dijalankan sesuai kapasitas armada tanpa mendesak.</p></div>
+      </div>
+      <div class="tstage">
+        <div class="when">Akhir Sep – awal Okt 2026<br><span class="pill sedang" style="margin-top:6px;">Buffer/susulan</span></div>
+        <div><h3>Cadangan</h3><p>Untuk seluruh rute risiko tinggi &amp; Mahakam Ulu jika muka air belum pulih, sebelum periode alokasi ditutup.</p></div>
+      </div>
+    </div>
+
+    <div class="section-head" style="margin-top:30px;"><h2>Prognosa atas rekomendasi periode sebelumnya (Feb-Mar 2026)</h2></div>
+    <div class="tablewrap" style="max-height:none;overflow:visible;">
+      <table>
+        <thead><tr><th style="width:36px;">#</th><th>Rekomendasi lama</th><th>Status Jul-Sep 2026</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Buffer waktu di awal jendela alokasi</td><td><span class="pill sedang">Masih berlaku, makin mendesak</span> — jendela operasional riil jauh lebih sempit dari Feb-Mar.</td></tr>
+          <tr><td>2</td><td>Rencana cadangan untuk rute tanpa redundansi moda</td><td><span class="pill sedang">Masih berlaku</span> — tidak ada perubahan status infrastruktur Krayan/Sebatik.</td></tr>
+          <tr><td>3</td><td>Koordinasi lintas-vendor, laporan progres per-desa</td><td><span class="pill tinggi">Makin krusial</span> — temuan at-cost Kaltara (§ tab Ringkasan) memperkuat urgensi ini.</td></tr>
+          <tr><td>4</td><td>Verifikasi cuaca &amp; muka air H-3</td><td><span class="pill tinggi">Terbukti benar, bukan lagi hipotetis</span> — krisis Sungai Mahakam sedang terjadi aktual per Agustus 2026.</td></tr>
+          <tr><td>5</td><td>Verifikasi titik koordinat kecamatan</td><td><span class="pill sedang">Masih berlaku, tidak berubah</span> — belum ada sumber baru yang memverifikasi presisi koordinat.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= TAB: METODOLOGI ================= -->
+  <div class="tabpanel" id="tab-metodologi">
+    <div class="section-head"><h2>Dasar kebijakan periode Jul-Sep 2026</h2></div>
+    <div class="card methcard"><ul><li>Surat penugasan Bapanas kepada Perum Bulog, 30 Juli 2026 -- penyaluran CPP bantuan pangan beras periode Juli-September 2026, 33.244.408 KPM, 10 kg beras/bulan/KPM disalurkan sekaligus (30 kg), mulai serentak 17 Agustus 2026</li><li>Total nasional: 997.200 ton beras, anggaran Rp17,52 triliun (Bapanas, Agu 2026)</li><li>Periode ini TIDAK termasuk minyak goreng (berbeda dari periode Feb-Mar 2026 yang mencakup beras & migor)</li><li>Bapanas membuka opsi Koperasi Desa/Kelurahan Merah Putih (KDKMP) sebagai titik penyaluran di lokasi yang memiliki fasilitas memadai (gudang, lokasi terjangkau) -- bersifat opsional per lokasi, bukan kewajiban seluruh KDKMP</li></ul></div>
+
+    <div class="section-head"><h2>Sumber data</h2></div>
+    <div class="card methcard"><ul><li>Dummy.xls -- sheet 'Data 514 Kab' (PBP realisasi Feb-Mar 2026 per kab/kota), 'Pra_Kontrak JPL vs Pengajuan At Cost', 'Pra-KKR Uji At Cost JPL', 'Pasca-KKR Uji At Cost JPL' (baris Kalimantan Timur & Kalimantan Utara)</li><li>dashboard_jpl_kaltim_kaltara.html / ANALISIS.md / README_dashboard.md -- 23 rute vendor JPL Bulog Feb-Mar 2026 (data disediakan pengguna, proyek sebelumnya)</li><li>Bapanas/Kemenko Pangan/Republika/Beritasatu/Bisnis.com/Kompas -- kebijakan Tahap II Jul-Sep 2026 & peran KDKMP (Agustus 2026)</li><li>SIMKOPDES via Arusbawah.co (27 Jul 2026) -- data transaksi KDKMP per kab/kota Kaltim</li><li>ODS Kemenkop UKM RI via Prokal/Radar Tarakan (15 Jul 2025) & Benuanta (11 Jun 2025) -- data legalitas KDKMP & jumlah desa Kaltara (CATATAN: data ini berusia ~13 bulan, jauh lebih lama dari data Kaltim; perlu konfirmasi ulang)</li><li>Tribun Kaltim / Kompas.com (Jul-Agu 2026) -- krisis debit Sungai Mahakam akibat kemarau panjang/El Nino berdampak pada rute kapal Kutai Barat & Mahakam Ulu</li></ul></div>
+
+    <div class="section-head"><h2>Metodologi simulasi</h2></div>
+    <div class="card methcard">
+      <h3>Alokasi PBP &amp; kuantum</h3>
+      <p>Tidak ada data PBP resmi Tahap II Jul-Sep 2026 yang diunggah. Simulasi memakai PBP realisasi Feb-Mar 2026 per kabupaten/kota (323.829 PBP, 100% realisasi) sebagai basis, dialokasikan ke tiap rute secara proporsional terhadap pangsa nilai kontrak beras rute tersebut dalam kabupaten yang sama. Kuantum baru: 30 kg beras/PBP (10 kg/bulan × 3 bulan, disalurkan sekaligus), tanpa minyak goreng.</p>
+      <h3>Tiga skenario biaya transporter</h3>
+      <p><b>Skenario A (Kontrak tetap):</b> tarif flat Rp/kg hasil aktual Feb-Mar 2026 per provinsi diterapkan pada kuantum baru.<br>
+      <b>Skenario B (Pola at-cost historis):</b> Skenario A dikalikan rasio pengajuan-at-cost/kontrak yang benar-benar terjadi Feb-Mar 2026 (Kaltim +33,26%, Kaltara +168,42%) — peringatan eksposur, bukan proyeksi biaya yang disarankan.<br>
+      <b>Skenario C (Pasca-koreksi APIP):</b> Skenario B dikalikan rasio hasil-reviu/pengajuan APIP Feb-Mar 2026 (Kaltim 16,63%, Kaltara 9,26%).</p>
+      <h3>Penyesuaian musim kemarau/El Niño</h3>
+      <p>Pengali tambahan pada Skenario A diterapkan khusus pada rute kapal sungai Mahakam berdasarkan pemberitaan aktual Agustus 2026 (bukan data tarif resmi): Mahakam Ulu ×2,00 ("biaya naik dua kali lipat"), Tering/Long Iram ×1,40 (titik kritis), Penyinggahan/Muara Pahu ×1,15, Muara Wis &amp; Muara Muntai ×1,05 (buffer minor, di luar titik kritis yang diberitakan).</p>
+      <h3>Kesiapan KDKMP</h3>
+      <p>Kaltim: tier kesiapan dari data transaksi riil SIMKOPDES 2026. Kaltara: dari data legalitas NIK pertengahan 2025 (jauh lebih lama, ditandai eksplisit) dibagi jumlah desa/kelurahan resmi per kabupaten.</p>
+    </div>
+
+    <div class="section-head"><h2>Keterbatasan</h2></div>
+    <div class="card methcard">
+      <ul>
+        <li>Seluruh kuantum PBP Jul-Sep 2026 adalah asumsi berbasis realisasi Feb-Mar 2026 — wajib dihitung ulang begitu data DTSEN/PBP resmi periode berjalan tersedia.</li>
+        <li>Alokasi PBP ke level rute adalah proksi proporsional, bukan data kecamatan/desa resmi per rute.</li>
+        <li>Data jumlah KDKMP Kaltara berusia ±13 bulan dan kemungkinan sudah banyak berubah.</li>
+        <li>Nilai "Nilai Kontrak" pada Dummy.xls (provinsi) dan dataset 23-rute vendor (dashboard sebelumnya) tidak sama persis — kedua sumber disajikan terpisah, tidak direkonsiliasi paksa.</li>
+        <li>Pengali penyesuaian kemarau dikalibrasi dari kutipan kualitatif media, bukan data tarif resmi terverifikasi.</li>
+        <li>Krisis Sungai Mahakam yang terverifikasi hanya di sistem Kaltim; dampak serupa di sistem sungai/laut Kaltara (bila ada) belum diverifikasi terpisah.</li>
+        <li>Nilai manfaat finansial KDKMP tidak dikuantifikasi dalam Rupiah — memerlukan data Biaya Distribusi non-transporter (Sosmonev/Pendukung) khusus Kaltim-Kaltara yang di luar cakupan sheet yang direferensikan.</li>
+      </ul>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn" id="dlCsv">⤓ Unduh CSV simulasi rute</button>
+      <button class="btn ghost" id="dlJson">⤓ Unduh JSON dataset lengkap</button>
+    </div>
+  </div>
+
+  <footer>
+    Alat bantu analisis &amp; simulasi perencanaan — bukan pengganti keputusan resmi Bapanas, Perum Bulog Kanwil Kaltim-Kaltara, JPL, maupun Dinas Koperasi/Pemprov terkait. Seluruh skenario biaya wajib diverifikasi terhadap kontrak/adendum resmi periode Juli-September 2026 begitu tersedia. Dokumen analisis lengkap: PROGNOSA_JUL_AGU_SEP_2026.md.
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script id="dataset" type="application/json">
+{"metadata": {"judul": "Prognosa & Simulasi Distribusi JPL + Keterlibatan Kopdeskel Merah Putih -- Kaltim & Kaltara", "periode_simulasi": "Juli - Agustus - September 2026 (CPP Bantuan Pangan Beras Tahap II)", "periode_basis_historis": "Februari - Maret 2026 (data aktual/hasil reviu APIP)", "dibuat": "21 Agustus 2026", "dasar_kebijakan": ["Surat penugasan Bapanas kepada Perum Bulog, 30 Juli 2026 -- penyaluran CPP bantuan pangan beras periode Juli-September 2026, 33.244.408 KPM, 10 kg beras/bulan/KPM disalurkan sekaligus (30 kg), mulai serentak 17 Agustus 2026", "Total nasional: 997.200 ton beras, anggaran Rp17,52 triliun (Bapanas, Agu 2026)", "Periode ini TIDAK termasuk minyak goreng (berbeda dari periode Feb-Mar 2026 yang mencakup beras & migor)", "Bapanas membuka opsi Koperasi Desa/Kelurahan Merah Putih (KDKMP) sebagai titik penyaluran di lokasi yang memiliki fasilitas memadai (gudang, lokasi terjangkau) -- bersifat opsional per lokasi, bukan kewajiban seluruh KDKMP"], "sumber_data": ["Dummy.xls -- sheet 'Data 514 Kab' (PBP realisasi Feb-Mar 2026 per kab/kota), 'Pra_Kontrak JPL vs Pengajuan At Cost', 'Pra-KKR Uji At Cost JPL', 'Pasca-KKR Uji At Cost JPL' (baris Kalimantan Timur & Kalimantan Utara)", "dashboard_jpl_kaltim_kaltara.html / ANALISIS.md / README_dashboard.md -- 23 rute vendor JPL Bulog Feb-Mar 2026 (data disediakan pengguna, proyek sebelumnya)", "Bapanas/Kemenko Pangan/Republika/Beritasatu/Bisnis.com/Kompas -- kebijakan Tahap II Jul-Sep 2026 & peran KDKMP (Agustus 2026)", "SIMKOPDES via Arusbawah.co (27 Jul 2026) -- data transaksi KDKMP per kab/kota Kaltim", "ODS Kemenkop UKM RI via Prokal/Radar Tarakan (15 Jul 2025) & Benuanta (11 Jun 2025) -- data legalitas KDKMP & jumlah desa Kaltara (CATATAN: data ini berusia ~13 bulan, jauh lebih lama dari data Kaltim; perlu konfirmasi ulang)", "Tribun Kaltim / Kompas.com (Jul-Agu 2026) -- krisis debit Sungai Mahakam akibat kemarau panjang/El Nino berdampak pada rute kapal Kutai Barat & Mahakam Ulu"], "catatan_metodologi_utama": "SELURUH angka biaya transporter Jul-Sep 2026 dalam dataset ini adalah SIMULASI, bukan nilai kontrak resmi (kontrak JPL Bulog periode Jul-Sep 2026 belum tersedia/tidak diunggah). Simulasi dibangun dari tarif flat per-kg hasil aktual Feb-Mar 2026 dan pola audit historis Feb-Mar 2026, diterapkan pada kuantum baru (30kg beras/PBP, tanpa migor) sesuai kebijakan resmi Tahap II."}, "ringkasan_simulasi": {"total_pbp_dialokasikan_estimasi": 323829, "total_beras_kg_juli_sep_2026": 9714870, "pangsa_terhadap_volume_nasional_persen": 0.974, "biaya_transporter_skenario_A_kontrak_tetap": 13817117041, "biaya_transporter_skenario_A_disesuaikan_kemarau": 13973962172, "biaya_transporter_skenario_B_pola_atcost_historis": 27670315248, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 3246789987, "pembanding_nilai_kontrak_total_feb_mar_2026_beras_migor": 11106766594, "perubahan_skenario_A_vs_feb_mar_persen": 24.4}, "province_params": {"tarif_beras": {"KALIMANTAN TIMUR": 939.1472455494144, "KALIMANTAN UTARA": 2984.1585487961097}, "tarif_migor": {"KALIMANTAN TIMUR": 987.5896424571519, "KALIMANTAN UTARA": 3000.9833010901675}, "pbp_total": {"KALIMANTAN TIMUR": 247327.0, "KALIMANTAN UTARA": 76502.0}, "prov_audit": {"KALIMANTAN TIMUR": {"nilai_kontrak_kanwil_dummy": 5141288653.0, "nilai_pengajuan_atcost": 6851518458.0, "overrun_ratio": 0.33264613610092897, "koreksi_pra": 5712257700.0, "hasil_reviu_pra": 1139260758.0, "retained_ratio_pra": 0.16627857970225146, "nilai_diterima_auditor_pasca": 6759636808.0, "nilai_belum_diverifikasi_pasca": 80081650.0, "completeness_ratio_pasca": 0.9865895931590585}, "KALIMANTAN UTARA": {"nilai_kontrak_kanwil_dummy": 2264263781.0, "nilai_pengajuan_atcost": 6077880499.0, "overrun_ratio": 1.6842634458056547, "koreksi_pra": 5514963106.0, "hasil_reviu_pra": 562917393.0, "retained_ratio_pra": 0.09261738415104039, "nilai_diterima_auditor_pasca": 891377093.0, "nilai_belum_diverifikasi_pasca": 5174613744.0, "completeness_ratio_pasca": 0.14665920021735523}}}, "routes_simulasi": [{"id": "R01", "provinsi": "KALIMANTAN TIMUR", "vendor": "Adi Nursahid", "kode_kabupaten": "6411", "kabupaten_induk": "Mahakam Ulu", "wilayah_label": "Mahakam Ulu", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 8, "nilai_kontrak_beras": 18308184, "pph23_beras": 366164, "dpp_beras": 17942020, "nilai_kontrak_migor": 3589840, "pph23_migor": 71797, "dpp_migor": 3518043, "nilai_kontrak_total": 21898024, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": 0.37822, "lon": 115.38048, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 174.9, "beras_kg_simulasi_juli_sep_2026": 5245.7, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 4926473, "biaya_transporter_skenario_B_pola_atcost_historis": 6565246, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 1091660, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 4926473, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R02", "provinsi": "KALIMANTAN TIMUR", "vendor": "Adi Nursahid", "kode_kabupaten": "6474", "kabupaten_induk": "Kota Bontang", "wilayah_label": "Bontang", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 2, "nilai_kontrak_beras": 179559168, "pph23_beras": 3591183, "dpp_beras": 175967985, "nilai_kontrak_migor": 35207680, "pph23_migor": 704154, "dpp_migor": 34503525, "nilai_kontrak_total": 214766848, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": 0.12526, "lon": 117.49603, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 13753.0, "beras_kg_simulasi_juli_sep_2026": 412590.0, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 387482762, "biaya_transporter_skenario_B_pola_atcost_historis": 516377406, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 85862502, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 387482762, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 8-9 (Mar, Buffer/Susulan)"}, {"id": "R03", "provinsi": "KALIMANTAN TIMUR", "vendor": "Adi Nursahid", "kode_kabupaten": "6472", "kabupaten_induk": "Kota Samarinda", "wilayah_label": "Samarinda", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 6, "nilai_kontrak_beras": 383993280, "pph23_beras": 7679866, "dpp_beras": 376313414, "nilai_kontrak_migor": 75292800, "pph23_migor": 1505856, "dpp_migor": 73786944, "nilai_kontrak_total": 459286080, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": -0.43333, "lon": 117.18333, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 60720.0, "beras_kg_simulasi_juli_sep_2026": 1821600.0, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 1710750622, "biaya_transporter_skenario_B_pola_atcost_historis": 2279825207, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 379086097, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 1710750622, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R04", "provinsi": "KALIMANTAN TIMUR", "vendor": "Didik Setyawan", "kode_kabupaten": "6407", "kabupaten_induk": "Kutai Barat", "wilayah_label": "Kutai Barat", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 43, "nilai_kontrak_beras": 612983540, "pph23_beras": 12259671, "dpp_beras": 600723869, "nilai_kontrak_migor": 118120572, "pph23_migor": 2362411, "dpp_migor": 115758161, "nilai_kontrak_total": 731104112, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": -0.59417, "lon": 115.51575, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 12556.0, "beras_kg_simulasi_juli_sep_2026": 376681.0, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 353758929, "biaya_transporter_skenario_B_pola_atcost_historis": 471435470, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 78389620, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 353758929, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R05", "provinsi": "KALIMANTAN TIMUR", "vendor": "Didik Setyawan", "kode_kabupaten": "6402", "kabupaten_induk": "Kutai Kartanegara", "wilayah_label": "Kutai Kartanegara", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 28, "nilai_kontrak_beras": 741138142, "pph23_beras": 14822763, "dpp_beras": 726315379, "nilai_kontrak_migor": 166400995, "pph23_migor": 3328020, "dpp_migor": 163072975, "nilai_kontrak_total": 907539137, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": -0.44019, "lon": 116.98139, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 40127.9, "beras_kg_simulasi_juli_sep_2026": 1203835.8, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 1130579052, "biaya_transporter_skenario_B_pola_atcost_historis": 1506661805, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 250525585, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 1130579052, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R06", "provinsi": "KALIMANTAN TIMUR", "vendor": "Didik Setyawan", "kode_kabupaten": "6408", "kabupaten_induk": "Kutai Timur", "wilayah_label": "Kutai Timur", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 30, "nilai_kontrak_beras": 936345189, "pph23_beras": 18726904, "dpp_beras": 917618285, "nilai_kontrak_migor": 187507756, "pph23_migor": 3750155, "dpp_migor": 183757601, "nilai_kontrak_total": 1123852945, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": 1.03769, "lon": 117.83112, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 30785.0, "beras_kg_simulasi_juli_sep_2026": 923550.0, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 867349439, "biaya_transporter_skenario_B_pola_atcost_historis": 1155869878, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 192196402, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 867349439, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R07", "provinsi": "KALIMANTAN TIMUR", "vendor": "Surahman Rustam", "kode_kabupaten": "6471", "kabupaten_induk": "Kota Balikpapan", "wilayah_label": "Balikpapan", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 4, "nilai_kontrak_beras": 80506273, "pph23_beras": 1610125, "dpp_beras": 78896148, "nilai_kontrak_migor": 15212092, "pph23_migor": 304242, "dpp_migor": 14907850, "nilai_kontrak_total": 95718365, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": -1.16667, "lon": 116.88333, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 21691.0, "beras_kg_simulasi_juli_sep_2026": 650730.0, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 611131287, "biaya_transporter_skenario_B_pola_atcost_historis": 814421748, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 135420892, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 611131287, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 8-9 (Mar, Buffer/Susulan)"}, {"id": "R08", "provinsi": "KALIMANTAN TIMUR", "vendor": "Hasanuddin Asgaf", "kode_kabupaten": "6401", "kabupaten_induk": "Paser", "wilayah_label": "Paser", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 36, "nilai_kontrak_beras": 522218449, "pph23_beras": 10444369, "dpp_beras": 511774080, "nilai_kontrak_migor": 133352956, "pph23_migor": 2667059, "dpp_migor": 130685897, "nilai_kontrak_total": 655571405, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": -1.43517, "lon": 116.23535, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 22913.0, "beras_kg_simulasi_juli_sep_2026": 687390.0, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 645560425, "biaya_transporter_skenario_B_pola_atcost_historis": 860303606, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 143050062, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 645560425, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R09", "provinsi": "KALIMANTAN TIMUR", "vendor": "Hasanuddin Asgaf", "kode_kabupaten": "6409", "kabupaten_induk": "Penajam Paser Utara", "wilayah_label": "Penajam Paser Utara", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 13, "nilai_kontrak_beras": 99727163, "pph23_beras": 1994543, "dpp_beras": 97732620, "nilai_kontrak_migor": 49127908, "pph23_migor": 982558, "dpp_migor": 48145350, "nilai_kontrak_total": 148855071, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": -1.25, "lon": 116.83333, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 16941.0, "beras_kg_simulasi_juli_sep_2026": 508230.0, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 477302805, "biaya_transporter_skenario_B_pola_atcost_historis": 636075738, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 105765770, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 477302805, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R10", "provinsi": "KALIMANTAN TIMUR", "vendor": "Sumarsono", "kode_kabupaten": "6403", "kabupaten_induk": "Berau", "wilayah_label": "Berau", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 17, "nilai_kontrak_beras": 310890400, "pph23_beras": 6217808, "dpp_beras": 304672592, "nilai_kontrak_migor": 52913080, "pph23_migor": 1058262, "dpp_migor": 51854818, "nilai_kontrak_total": 363803480, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": 2.0, "lon": 117.3, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 12213.0, "beras_kg_simulasi_juli_sep_2026": 366390.0, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 344094159, "biaya_transporter_skenario_B_pola_atcost_historis": 458555752, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 76247999, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 344094159, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R11", "provinsi": "KALIMANTAN TIMUR", "vendor": "Marjuni", "kode_kabupaten": "6407", "kabupaten_induk": "Kutai Barat", "wilayah_label": "Kutai Barat (Khusus Kec. Tering, Long Iram, Mook Manaar Bulatn)", "jumlah_kecamatan_dalam_kontrak": 3, "moda_angkutan": "Kapal (Multi Moda)", "redundansi_moda": false, "desa_prioritas_pkpke_kabupaten": 43, "nilai_kontrak_beras": 146310824, "pph23_beras": 2926216, "dpp_beras": 143384608, "nilai_kontrak_migor": 23139404, "pph23_migor": 462788, "dpp_migor": 22676616, "nilai_kontrak_total": 169450228, "skor_risiko": 7.2, "kategori_risiko": "Tinggi", "lat": -0.13, "lon": 115.65, "sumber_koordinat": "perkiraan kecamatan DAS Mahakam tengah, Kab. Kutai Barat (belum diverifikasi presisi)", "pbp_alokasi_estimasi": 2997.0, "beras_kg_simulasi_juli_sep_2026": 89908.6, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 84437439, "biaya_transporter_skenario_B_pola_atcost_historis": 112525227, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 18710535, "penyesuaian_kemarau_elnino": {"multiplier": 1.4, "level": "Sedang-Tinggi", "catatan": "Kec. Tering/Long Iram berada tepat di titik akhir yang masih terjangkau kapal (\"hanya sampai Long Iram\") -- rawan keterlambatan & kebutuhan alih kapal meski belum sepenuhnya terputus."}, "biaya_transporter_skenario_A_disesuaikan_kemarau": 118212415, "jadwal_tahap_jul_sep_2026": "Tahap 1 - Darurat (18-24 Agu 2026)", "jadwal_cadangan_jul_sep_2026": "Cadangan: akhir Sep-awal Okt 2026 jika gagal salur", "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 1 (Feb, Tahap 1)"}, {"id": "R12", "provinsi": "KALIMANTAN TIMUR", "vendor": "Marjuni", "kode_kabupaten": "6411", "kabupaten_induk": "Mahakam Ulu", "wilayah_label": "Mahakam Ulu", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Kapal (Multi Moda)", "redundansi_moda": false, "desa_prioritas_pkpke_kabupaten": 8, "nilai_kontrak_beras": 390247573, "pph23_beras": 7804951, "dpp_beras": 382442622, "nilai_kontrak_migor": 81201532, "pph23_migor": 1624031, "dpp_migor": 79577501, "nilai_kontrak_total": 471449105, "skor_risiko": 6.0, "kategori_risiko": "Sedang", "lat": 0.37822, "lon": 115.38048, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 3727.1, "beras_kg_simulasi_juli_sep_2026": 111814.3, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 105010103, "biaya_transporter_skenario_B_pola_atcost_historis": 139941308, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 23269242, "penyesuaian_kemarau_elnino": {"multiplier": 2.0, "level": "Tinggi", "catatan": "Kapal besar tak lagi bisa mencapai Mahakam Ulu (Long Bagun); muatan harus dipindah ke kapal/kelotok lebih kecil di Long Iram. Biaya angkut Samarinda-Mahulu dilaporkan naik dua kali lipat akibat debit Sungai Mahakam turun 5-6 meter dari normal (Kompas, Tribun Kaltim, Agu 2026)."}, "biaya_transporter_skenario_A_disesuaikan_kemarau": 210020206, "jadwal_tahap_jul_sep_2026": "Tahap 2 - Prioritas Kemarau (25 Agu-7 Sep 2026)", "jadwal_cadangan_jul_sep_2026": "Cadangan: akhir Sep-awal Okt 2026 jika muka air belum pulih", "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 2-3 (Feb, Tahap 1)"}, {"id": "R13", "provinsi": "KALIMANTAN TIMUR", "vendor": "Fadillah", "kode_kabupaten": "6402", "kabupaten_induk": "Kutai Kartanegara", "wilayah_label": "Kutai Kartanegara (Khusus Kec. Muara Wis)", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Kapal (Multi Moda)", "redundansi_moda": false, "desa_prioritas_pkpke_kabupaten": 28, "nilai_kontrak_beras": 34279242, "pph23_beras": 685585, "dpp_beras": 33593657, "nilai_kontrak_migor": 6855848, "pph23_migor": 137117, "dpp_migor": 6718731, "nilai_kontrak_total": 41135090, "skor_risiko": 6.0, "kategori_risiko": "Sedang", "lat": -0.2, "lon": 116.55, "sumber_koordinat": "perkiraan kecamatan DAS Mahakam/Danau Semayang, Kukar (belum diverifikasi presisi)", "pbp_alokasi_estimasi": 1856.0, "beras_kg_simulasi_juli_sep_2026": 55680.0, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 52291726, "biaya_transporter_skenario_B_pola_atcost_historis": 69686367, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 11587350, "penyesuaian_kemarau_elnino": {"multiplier": 1.05, "level": "Rendah", "catatan": "Muara Wis (area Danau Semayang/Mahakam tengah-hilir) di luar titik kritis yang dilaporkan media, risiko tambahan minor."}, "biaya_transporter_skenario_A_disesuaikan_kemarau": 54906313, "jadwal_tahap_jul_sep_2026": "Tahap 2 - Prioritas Kemarau (25 Agu-7 Sep 2026)", "jadwal_cadangan_jul_sep_2026": "Cadangan: akhir Sep-awal Okt 2026", "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 2-3 (Feb, Tahap 1)"}, {"id": "R14", "provinsi": "KALIMANTAN TIMUR", "vendor": "Pahmi Rahmadani", "kode_kabupaten": "6407", "kabupaten_induk": "Kutai Barat", "wilayah_label": "Kutai Barat (Khusus Kec. Penyinggahan, Muara Pahu)", "jumlah_kecamatan_dalam_kontrak": 2, "moda_angkutan": "Kapal (Multi Moda)", "redundansi_moda": false, "desa_prioritas_pkpke_kabupaten": 43, "nilai_kontrak_beras": 99885989, "pph23_beras": 1997720, "dpp_beras": 97888269, "nilai_kontrak_migor": 19977198, "pph23_migor": 399544, "dpp_migor": 19577654, "nilai_kontrak_total": 119863187, "skor_risiko": 6.6, "kategori_risiko": "Tinggi", "lat": -0.35, "lon": 115.85, "sumber_koordinat": "perkiraan kecamatan DAS Mahakam tengah, Kutai Barat (belum diverifikasi presisi)", "pbp_alokasi_estimasi": 2046.0, "beras_kg_simulasi_juli_sep_2026": 61380.4, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 57645203, "biaya_transporter_skenario_B_pola_atcost_historis": 76820657, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 12773630, "penyesuaian_kemarau_elnino": {"multiplier": 1.15, "level": "Rendah-Sedang", "catatan": "Penyinggahan & Muara Pahu berada di jalur Samarinda-Melak yang menurut petugas UPTD Pelabuhan Melak \"masih cukup normal\", namun tetap rawan karena bergantung penuh pada debit sungai."}, "biaya_transporter_skenario_A_disesuaikan_kemarau": 66291983, "jadwal_tahap_jul_sep_2026": "Tahap 1 - Darurat (18-24 Agu 2026)", "jadwal_cadangan_jul_sep_2026": "Cadangan: akhir Sep-awal Okt 2026 jika gagal salur", "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 2-3 (Feb, Tahap 1)"}, {"id": "R15", "provinsi": "KALIMANTAN TIMUR", "vendor": "Rosihan Anwar", "kode_kabupaten": "6402", "kabupaten_induk": "Kutai Kartanegara", "wilayah_label": "Kutai Kartanegara (Khusus Kec. Muara Muntai)", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Kapal (Multi Moda)", "redundansi_moda": false, "desa_prioritas_pkpke_kabupaten": 28, "nilai_kontrak_beras": 89136000, "pph23_beras": 1782720, "dpp_beras": 87353280, "nilai_kontrak_migor": 9130673, "pph23_migor": 182613, "dpp_migor": 8948060, "nilai_kontrak_total": 98266673, "skor_risiko": 6.0, "kategori_risiko": "Sedang", "lat": -0.3, "lon": 116.55, "sumber_koordinat": "perkiraan kecamatan tepi Danau Semayang, Kukar (belum diverifikasi presisi)", "pbp_alokasi_estimasi": 4826.1, "beras_kg_simulasi_juli_sep_2026": 144784.2, "tarif_kontrak_rp_per_kg": 939.15, "biaya_transporter_skenario_A_kontrak_tetap": 135973699, "biaya_transporter_skenario_B_pola_atcost_historis": 181204824, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 30130481, "penyesuaian_kemarau_elnino": {"multiplier": 1.05, "level": "Rendah", "catatan": "Muara Muntai (area Danau Semayang/Mahakam tengah-hilir) di luar titik kritis yang dilaporkan media, risiko tambahan minor."}, "biaya_transporter_skenario_A_disesuaikan_kemarau": 142772384, "jadwal_tahap_jul_sep_2026": "Tahap 2 - Prioritas Kemarau (25 Agu-7 Sep 2026)", "jadwal_cadangan_jul_sep_2026": "Cadangan: akhir Sep-awal Okt 2026", "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 2-3 (Feb, Tahap 1)"}, {"id": "R16", "provinsi": "KALIMANTAN UTARA", "vendor": "Ahyan Fuadi", "kode_kabupaten": "6502", "kabupaten_induk": "Malinau", "wilayah_label": "Bulungan", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 20, "nilai_kontrak_beras": 435962000, "pph23_beras": 8719240, "dpp_beras": 427242760, "nilai_kontrak_migor": 87629200, "pph23_migor": 1752584, "dpp_migor": 85876616, "nilai_kontrak_total": 523591200, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": 3.0, "lon": 117.16667, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 7912.0, "beras_kg_simulasi_juli_sep_2026": 237360.0, "tarif_kontrak_rp_per_kg": 2984.16, "biaya_transporter_skenario_A_kontrak_tetap": 708319873, "biaya_transporter_skenario_B_pola_atcost_historis": 1901317143, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 176095020, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 708319873, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R17", "provinsi": "KALIMANTAN UTARA", "vendor": "Ahyan Fuadi", "kode_kabupaten": "6501", "kabupaten_induk": "Bulungan", "wilayah_label": "Malinau", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 15, "nilai_kontrak_beras": 1753449000, "pph23_beras": 35068980, "dpp_beras": 1718380020, "nilai_kontrak_migor": 353993100, "pph23_migor": 7079862, "dpp_migor": 346913238, "nilai_kontrak_total": 2107442100, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": 2.45, "lon": 115.68333, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 13189.0, "beras_kg_simulasi_juli_sep_2026": 395670.0, "tarif_kontrak_rp_per_kg": 2984.16, "biaya_transporter_skenario_A_kontrak_tetap": 1180742013, "biaya_transporter_skenario_B_pola_atcost_historis": 3169422624, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 293543633, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 1180742013, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R18", "provinsi": "KALIMANTAN UTARA", "vendor": "Ahyan Fuadi", "kode_kabupaten": "6504", "kabupaten_induk": "Tana Tidung", "wilayah_label": "Tana Tidung", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 6, "nilai_kontrak_beras": 87711000, "pph23_beras": 1754220, "dpp_beras": 85956780, "nilai_kontrak_migor": 13860600, "pph23_migor": 277212, "dpp_migor": 13583388, "nilai_kontrak_total": 101571600, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": 3.55, "lon": 117.25, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 1872.0, "beras_kg_simulasi_juli_sep_2026": 56160.0, "tarif_kontrak_rp_per_kg": 2984.16, "biaya_transporter_skenario_A_kontrak_tetap": 167590344, "biaya_transporter_skenario_B_pola_atcost_historis": 449856635, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 41664545, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 167590344, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R19", "provinsi": "KALIMANTAN UTARA", "vendor": "Muhammad Cakra", "kode_kabupaten": "6571", "kabupaten_induk": "Kota Tarakan", "wilayah_label": "Tarakan", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 1, "nilai_kontrak_beras": 145121348, "pph23_beras": 2902427, "dpp_beras": 142218921, "nilai_kontrak_migor": 31548671, "pph23_migor": 630973, "dpp_migor": 30917697, "nilai_kontrak_total": 176670019, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": 3.36667, "lon": 117.6, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 30369.0, "beras_kg_simulasi_juli_sep_2026": 911070.0, "tarif_kontrak_rp_per_kg": 2984.16, "biaya_transporter_skenario_A_kontrak_tetap": 2718777329, "biaya_transporter_skenario_B_pola_atcost_historis": 7297914602, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 675913760, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 2718777329, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 8-9 (Mar, Buffer/Susulan)"}, {"id": "R20", "provinsi": "KALIMANTAN UTARA", "vendor": "Muhammad Cakra", "kode_kabupaten": "6503", "kabupaten_induk": "Nunukan", "wilayah_label": "Nunukan", "jumlah_kecamatan_dalam_kontrak": 1, "moda_angkutan": "Truck (Single Moda)", "redundansi_moda": true, "desa_prioritas_pkpke_kabupaten": 26, "nilai_kontrak_beras": 1233925598, "pph23_beras": 24678512, "dpp_beras": 1209247086, "nilai_kontrak_migor": 249350727, "pph23_migor": 4987014, "dpp_migor": 244363712, "nilai_kontrak_total": 1483276325, "skor_risiko": 2.0, "kategori_risiko": "Rendah", "lat": 4.13333, "lon": 116.7, "sumber_koordinat": "regency_centroid", "pbp_alokasi_estimasi": 13331.4, "beras_kg_simulasi_juli_sep_2026": 399942.2, "tarif_kontrak_rp_per_kg": 2984.16, "biaya_transporter_skenario_A_kontrak_tetap": 1193490891, "biaya_transporter_skenario_B_pola_atcost_historis": 3203643973, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 296713125, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 1193490891, "jadwal_tahap_jul_sep_2026": "Tahap 3 - Reguler (8-28 Sep 2026)", "jadwal_cadangan_jul_sep_2026": null, "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 6-7 (Mar, Tahap 2)"}, {"id": "R21", "provinsi": "KALIMANTAN UTARA", "vendor": "Muhammad Cakra", "kode_kabupaten": "6503", "kabupaten_induk": "Nunukan", "wilayah_label": "Nunukan (Kec. Krayan, Krayan Barat, Krayan Tengah, Krayan Selatan, Krayan Timur) 33.420 Kg", "jumlah_kecamatan_dalam_kontrak": 5, "moda_angkutan": "Pesawat Terbang (Multi Moda)", "redundansi_moda": false, "desa_prioritas_pkpke_kabupaten": 26, "nilai_kontrak_beras": 834029000, "pph23_beras": 16680580, "dpp_beras": 817348420, "nilai_kontrak_migor": 166805800, "pph23_migor": 3336116, "dpp_migor": 163469684, "nilai_kontrak_total": 1000834800, "skor_risiko": 10, "kategori_risiko": "Tinggi", "lat": 3.91139, "lon": 115.69806, "sumber_koordinat": "Wikipedia - Distrik Krayan, Nunukan (terverifikasi)", "pbp_alokasi_estimasi": 9010.9, "beras_kg_simulasi_juli_sep_2026": 270327.0, "tarif_kontrak_rp_per_kg": 2984.16, "biaya_transporter_skenario_A_kontrak_tetap": 806698569, "biaya_transporter_skenario_B_pola_atcost_historis": 2165391482, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 200552895, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 806698569, "jadwal_tahap_jul_sep_2026": "Tahap 1 - Darurat (18-24 Agu 2026)", "jadwal_cadangan_jul_sep_2026": "Cadangan: akhir Sep-awal Okt 2026 jika gagal salur", "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 1 (Feb, Tahap 1)"}, {"id": "R22", "provinsi": "KALIMANTAN UTARA", "vendor": "Adi Wibowo", "kode_kabupaten": "6503", "kabupaten_induk": "Nunukan", "wilayah_label": "Nunukan (Khusus Kec. Sebatik, Sebatik Barat, Sebatik Tengah, Sebatik Timur, Sebatik Utara) 88.660 Kg", "jumlah_kecamatan_dalam_kontrak": 5, "moda_angkutan": "Kapal (Multi Moda)", "redundansi_moda": false, "desa_prioritas_pkpke_kabupaten": 26, "nilai_kontrak_beras": 49531200, "pph23_beras": 990624, "dpp_beras": 48540576, "nilai_kontrak_migor": 9906240, "pph23_migor": 198124.8, "dpp_migor": 9708115.2, "nilai_kontrak_total": 59437440, "skor_risiko": 8.4, "kategori_risiko": "Tinggi", "lat": 4.08, "lon": 117.85, "sumber_koordinat": "BPS/jurnal Pulau Sebatik (terverifikasi, area 4.01-4.10 LU / 117.68-117.93 BT)", "pbp_alokasi_estimasi": 535.1, "beras_kg_simulasi_juli_sep_2026": 16054.1, "tarif_kontrak_rp_per_kg": 2984.16, "biaya_transporter_skenario_A_kontrak_tetap": 47908104, "biaya_transporter_skenario_B_pola_atcost_historis": 128597973, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 11910408, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 47908104, "jadwal_tahap_jul_sep_2026": "Tahap 1 - Darurat (18-24 Agu 2026)", "jadwal_cadangan_jul_sep_2026": "Cadangan: akhir Sep-awal Okt 2026 jika gagal salur", "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 1 (Feb, Tahap 1)"}, {"id": "R23", "provinsi": "KALIMANTAN UTARA", "vendor": "Ricornius", "kode_kabupaten": "6503", "kabupaten_induk": "Nunukan", "wilayah_label": "Nunukan (Khusus Kec. Lumbis Hulu, Nunukan, Nunukan Selatan, Sembakung) 203.780 Kg", "jumlah_kecamatan_dalam_kontrak": 4, "moda_angkutan": "Kapal (Multi Moda)", "redundansi_moda": false, "desa_prioritas_pkpke_kabupaten": 26, "nilai_kontrak_beras": 26152800, "pph23_beras": 523056, "dpp_beras": 25629744, "nilai_kontrak_migor": 5230560, "pph23_migor": 104611.2, "dpp_migor": 5125948.8, "nilai_kontrak_total": 31383360, "skor_risiko": 7.8, "kategori_risiko": "Tinggi", "lat": 3.85, "lon": 117.15, "sumber_koordinat": "perkiraan area DAS Sembakung-Sedalir, Kab. Nunukan (belum diverifikasi presisi)", "pbp_alokasi_estimasi": 282.6, "beras_kg_simulasi_juli_sep_2026": 8476.7, "tarif_kontrak_rp_per_kg": 2984.16, "biaya_transporter_skenario_A_kontrak_tetap": 25295795, "biaya_transporter_skenario_B_pola_atcost_historis": 67900577, "biaya_transporter_skenario_C_pasca_koreksi_apip_historis": 6288774, "penyesuaian_kemarau_elnino": null, "biaya_transporter_skenario_A_disesuaikan_kemarau": 25295795, "jadwal_tahap_jul_sep_2026": "Tahap 1 - Darurat (18-24 Agu 2026)", "jadwal_cadangan_jul_sep_2026": "Cadangan: akhir Sep-awal Okt 2026 jika gagal salur", "jadwal_tahap_feb_mar_2026_referensi_lama": "Minggu 1 (Feb, Tahap 1)"}], "kabupaten_rollup": {"Mahakam Ulu": {"skenario_A": 109936576, "skenario_B": 146506554, "skenario_C": 24360902, "pbp": 3902.0, "kg": 117060.0, "routes": 2, "risk_max": 6.0}, "Kota Bontang": {"skenario_A": 387482762, "skenario_B": 516377406, "skenario_C": 85862502, "pbp": 13753.0, "kg": 412590.0, "routes": 1, "risk_max": 2.0}, "Kota Samarinda": {"skenario_A": 1710750622, "skenario_B": 2279825207, "skenario_C": 379086097, "pbp": 60720.0, "kg": 1821600.0, "routes": 1, "risk_max": 2.0}, "Kutai Barat": {"skenario_A": 495841571, "skenario_B": 660781354, "skenario_C": 109873785, "pbp": 17599.0, "kg": 527970.0, "routes": 3, "risk_max": 7.2}, "Kutai Kartanegara": {"skenario_A": 1318844477, "skenario_B": 1757552996, "skenario_C": 292243416, "pbp": 46810.0, "kg": 1404300.0, "routes": 3, "risk_max": 6.0}, "Kutai Timur": {"skenario_A": 867349439, "skenario_B": 1155869878, "skenario_C": 192196402, "pbp": 30785.0, "kg": 923550.0, "routes": 1, "risk_max": 2.0}, "Kota Balikpapan": {"skenario_A": 611131287, "skenario_B": 814421748, "skenario_C": 135420892, "pbp": 21691.0, "kg": 650730.0, "routes": 1, "risk_max": 2.0}, "Paser": {"skenario_A": 645560425, "skenario_B": 860303606, "skenario_C": 143050062, "pbp": 22913.0, "kg": 687390.0, "routes": 1, "risk_max": 2.0}, "Penajam Paser Utara": {"skenario_A": 477302805, "skenario_B": 636075738, "skenario_C": 105765770, "pbp": 16941.0, "kg": 508230.0, "routes": 1, "risk_max": 2.0}, "Berau": {"skenario_A": 344094159, "skenario_B": 458555752, "skenario_C": 76247999, "pbp": 12213.0, "kg": 366390.0, "routes": 1, "risk_max": 2.0}, "Malinau": {"skenario_A": 708319873, "skenario_B": 1901317143, "skenario_C": 176095020, "pbp": 7912.0, "kg": 237360.0, "routes": 1, "risk_max": 2.0}, "Bulungan": {"skenario_A": 1180742013, "skenario_B": 3169422624, "skenario_C": 293543633, "pbp": 13189.0, "kg": 395670.0, "routes": 1, "risk_max": 2.0}, "Tana Tidung": {"skenario_A": 167590344, "skenario_B": 449856635, "skenario_C": 41664545, "pbp": 1872.0, "kg": 56160.0, "routes": 1, "risk_max": 2.0}, "Kota Tarakan": {"skenario_A": 2718777329, "skenario_B": 7297914602, "skenario_C": 675913760, "pbp": 30369.0, "kg": 911070.0, "routes": 1, "risk_max": 2.0}, "Nunukan": {"skenario_A": 2073393359, "skenario_B": 5565534005, "skenario_C": 515465202, "pbp": 23159.999999999996, "kg": 694799.9999999999, "routes": 4, "risk_max": 10}}, "tiering_risiko_kesiapan": [{"kab": "Nunukan", "skor_risiko_maks": 10, "kategori_risiko": "Tinggi", "tier_kesiapan_kdkmp": "Belum Siap", "rekomendasi_program": "Tier 3 - Tunda, JPL/Bulog tangani penuh"}, {"kab": "Kutai Barat", "skor_risiko_maks": 7.2, "kategori_risiko": "Tinggi", "tier_kesiapan_kdkmp": "Belum Siap", "rekomendasi_program": "Tier 3 - Tunda, JPL/Bulog tangani penuh"}, {"kab": "Mahakam Ulu", "skor_risiko_maks": 6.0, "kategori_risiko": "Sedang", "tier_kesiapan_kdkmp": "Belum Siap", "rekomendasi_program": "Tier 3 - Tunda, JPL/Bulog tangani penuh"}, {"kab": "Kutai Kartanegara", "skor_risiko_maks": 6.0, "kategori_risiko": "Sedang", "tier_kesiapan_kdkmp": "Berkembang", "rekomendasi_program": "Tier 2 - Titik terima (berbagi peran dgn JPL)"}, {"kab": "Kota Bontang", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Belum Siap", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh (jika data kesiapan tersedia)"}, {"kab": "Kota Samarinda", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Belum Siap", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh (jika data kesiapan tersedia)"}, {"kab": "Kutai Timur", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Berkembang", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh"}, {"kab": "Kota Balikpapan", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Siap", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh"}, {"kab": "Paser", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Belum Siap", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh (jika data kesiapan tersedia)"}, {"kab": "Penajam Paser Utara", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Belum Siap", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh (jika data kesiapan tersedia)"}, {"kab": "Berau", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Belum Siap", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh (jika data kesiapan tersedia)"}, {"kab": "Malinau", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Belum Siap", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh (jika data kesiapan tersedia)"}, {"kab": "Bulungan", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Berkembang", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh"}, {"kab": "Tana Tidung", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Berkembang", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh"}, {"kab": "Kota Tarakan", "skor_risiko_maks": 2.0, "kategori_risiko": "Rendah", "tier_kesiapan_kdkmp": "Berkembang", "rekomendasi_program": "Tier 1 - Pilot titik bagi penuh"}], "kdmp": {"kaltim": [{"kab": "Kota Balikpapan", "provinsi": "KALIMANTAN TIMUR", "transaksi_2026_rp": 115570514, "tier_kesiapan": "Siap", "catatan": "Transaksi tertinggi se-Kaltim per data SIMKOPDES 27 Jul 2026.", "sumber": "SIMKOPDES via Arusbawah.co, 27 Jul 2026", "jumlah_kdkmp_provinsi": 1037}, {"kab": "Kutai Kartanegara", "provinsi": "KALIMANTAN TIMUR", "transaksi_2026_rp": 80582000, "tier_kesiapan": "Berkembang", "catatan": "Jumlah KDKMP terbanyak se-Kaltim (menurut SIMKOPDES) dan transaksi terbesar kedua.", "sumber": "SIMKOPDES via Arusbawah.co, 27 Jul 2026", "jumlah_kdkmp_provinsi": 1037}, {"kab": "Kutai Timur", "provinsi": "KALIMANTAN TIMUR", "transaksi_2026_rp": 7089000, "tier_kesiapan": "Berkembang", "catatan": "Transaksi tercatat tapi masih kecil.", "sumber": "SIMKOPDES via Arusbawah.co, 27 Jul 2026", "jumlah_kdkmp_provinsi": 1037}, {"kab": "Kota Samarinda", "provinsi": "KALIMANTAN TIMUR", "transaksi_2026_rp": 5579500, "tier_kesiapan": "Belum Siap", "catatan": "Ibu kota provinsi, tapi transaksi baru Rp5,58 juta -- jauh di bawah Balikpapan & Kukar.", "sumber": "SIMKOPDES via Arusbawah.co, 27 Jul 2026", "jumlah_kdkmp_provinsi": 1037}, {"kab": "Kota Bontang", "provinsi": "KALIMANTAN TIMUR", "transaksi_2026_rp": 0, "tier_kesiapan": "Belum Siap", "catatan": "Belum tercatat transaksi di SIMKOPDES per 27 Jul 2026.", "sumber": "SIMKOPDES via Arusbawah.co, 27 Jul 2026", "jumlah_kdkmp_provinsi": 1037}, {"kab": "Kutai Barat", "provinsi": "KALIMANTAN TIMUR", "transaksi_2026_rp": 0, "tier_kesiapan": "Belum Siap", "catatan": "Belum tercatat transaksi -- padahal kabupaten risiko rute TERTINGGI KEDUA (skor 7,2) di seluruh jaringan Kaltim-Kaltara.", "sumber": "SIMKOPDES via Arusbawah.co, 27 Jul 2026", "jumlah_kdkmp_provinsi": 1037}, {"kab": "Mahakam Ulu", "provinsi": "KALIMANTAN TIMUR", "transaksi_2026_rp": 0, "tier_kesiapan": "Belum Siap", "catatan": "Belum tercatat transaksi -- kabupaten yang saat ini (Agu 2026) tengah mengalami krisis pasokan akibat Sungai Mahakam surut.", "sumber": "SIMKOPDES via Arusbawah.co, 27 Jul 2026", "jumlah_kdkmp_provinsi": 1037}, {"kab": "Paser", "provinsi": "KALIMANTAN TIMUR", "transaksi_2026_rp": 0, "tier_kesiapan": "Belum Siap", "catatan": "Belum tercatat transaksi di SIMKOPDES per 27 Jul 2026.", "sumber": "SIMKOPDES via Arusbawah.co, 27 Jul 2026", "jumlah_kdkmp_provinsi": 1037}, {"kab": "Penajam Paser Utara", "provinsi": "KALIMANTAN TIMUR", "transaksi_2026_rp": 0, "tier_kesiapan": "Belum Siap", "catatan": "Belum tercatat transaksi di SIMKOPDES per 27 Jul 2026.", "sumber": "SIMKOPDES via Arusbawah.co, 27 Jul 2026", "jumlah_kdkmp_provinsi": 1037}, {"kab": "Berau", "provinsi": "KALIMANTAN TIMUR", "transaksi_2026_rp": 0, "tier_kesiapan": "Belum Siap", "catatan": "Belum tercatat transaksi di SIMKOPDES per 27 Jul 2026.", "sumber": "SIMKOPDES via Arusbawah.co, 27 Jul 2026", "jumlah_kdkmp_provinsi": 1037}], "kaltara": [{"kab": "Kabupaten Bulungan", "provinsi": "KALIMANTAN UTARA", "jumlah_koperasi_ods": 330, "nik_legalitas": 47, "jumlah_desa": 81, "rasio_nik_desa": 0.5802469135802469, "tier_kesiapan": "Berkembang", "catatan": "NIK legalitas terbanyak se-Kaltara.", "sumber": "ODS Kemenkop UKM RI via Prokal/Radar Tarakan/Fokus Borneo, 15 Jul 2025 (data legalitas terindikasi menua -- perlu konfirmasi ulang per Agu 2026); jumlah desa dari Benuanta, 11 Jun 2025"}, {"kab": "Kota Tarakan", "provinsi": "KALIMANTAN UTARA", "jumlah_koperasi_ods": 199, "nik_legalitas": 41, "jumlah_desa": 20, "rasio_nik_desa": 2.05, "tier_kesiapan": "Berkembang", "catatan": "Rasio NIK per kelurahan tertinggi se-Kaltara (basis wilayah kecil, perkotaan).", "sumber": "ODS Kemenkop UKM RI via Prokal/Radar Tarakan/Fokus Borneo, 15 Jul 2025 (data legalitas terindikasi menua -- perlu konfirmasi ulang per Agu 2026); jumlah desa dari Benuanta, 11 Jun 2025"}, {"kab": "Kabupaten Tana Tidung", "provinsi": "KALIMANTAN UTARA", "jumlah_koperasi_ods": 101, "nik_legalitas": 10, "jumlah_desa": 32, "rasio_nik_desa": 0.3125, "tier_kesiapan": "Berkembang", "catatan": "Basis kecil tapi rasio legalitas per desa relatif baik (31%).", "sumber": "ODS Kemenkop UKM RI via Prokal/Radar Tarakan/Fokus Borneo, 15 Jul 2025 (data legalitas terindikasi menua -- perlu konfirmasi ulang per Agu 2026); jumlah desa dari Benuanta, 11 Jun 2025"}, {"kab": "Kabupaten Malinau", "provinsi": "KALIMANTAN UTARA", "jumlah_koperasi_ods": 215, "nik_legalitas": 12, "jumlah_desa": 109, "rasio_nik_desa": 0.11009174311926606, "tier_kesiapan": "Belum Siap", "catatan": "Rasio NIK/desa rendah (11%).", "sumber": "ODS Kemenkop UKM RI via Prokal/Radar Tarakan/Fokus Borneo, 15 Jul 2025 (data legalitas terindikasi menua -- perlu konfirmasi ulang per Agu 2026); jumlah desa dari Benuanta, 11 Jun 2025"}, {"kab": "Kabupaten Nunukan", "provinsi": "KALIMANTAN UTARA", "jumlah_koperasi_ods": 482, "nik_legalitas": 16, "jumlah_desa": 240, "rasio_nik_desa": 0.06666666666666667, "tier_kesiapan": "Belum Siap", "catatan": "Rasio NIK/desa TERENDAH se-Kaltara (6,7%) -- padahal kabupaten ini menaungi SELURUH rute risiko TERTINGGI (Krayan 10/10, Sebatik 8,4/10, Lumbis Hulu dkk 7,8/10).", "sumber": "ODS Kemenkop UKM RI via Prokal/Radar Tarakan/Fokus Borneo, 15 Jul 2025 (data legalitas terindikasi menua -- perlu konfirmasi ulang per Agu 2026); jumlah desa dari Benuanta, 11 Jun 2025"}]}}
+</script>
+<script>
+const DATA = JSON.parse(document.getElementById('dataset').textContent);
+const routes = DATA.routes_simulasi;
+const rekap = DATA.ringkasan_simulasi;
+
+function fmtRp(n){
+  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
+}
+function fmtRpM(n){
+  return 'Rp ' + (n/1e9).toLocaleString('id-ID',{maximumFractionDigits:2}) + ' M';
+}
+function fmtNum(n){ return Math.round(n).toLocaleString('id-ID'); }
+function pillRisk(cat){
+  const cls = cat==='Tinggi'?'tinggi':cat==='Sedang'?'sedang':'rendah';
+  return `<span class="pill ${cls}">${cat}</span>`;
+}
+function pillTier(tier){
+  const map = {'Siap':'siap','Berkembang':'berkembang','Belum Siap':'belumsiap'};
+  const cls = map[tier] || 'berkembang';
+  const label = tier || 'Data belum tersedia';
+  return `<span class="pill ${cls}">${label}</span>`;
+}
+function pillModa(m){
+  const cls = m.indexOf('Truck')>=0?'moda-truck':m.indexOf('Kapal')>=0?'moda-kapal':'moda-pesawat';
+  const label = m.replace(' (Single Moda)','').replace(' (Multi Moda)','');
+  return `<span class="pill ${cls}">${label}</span>`;
+}
+function pillProgTier(t){
+  let cls='tier1', short=t;
+  if(t.indexOf('Tier 1b')>=0){cls='tier1b';}
+  else if(t.indexOf('Tier 2')>=0){cls='tier2';}
+  else if(t.indexOf('Tier 3')>=0){cls='tier3';}
+  else if(t.indexOf('Tier 1')>=0){cls='tier1';}
+  return `<span class="pill ${cls}">${t}</span>`;
+}
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tabbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tabpanel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='rute' && map){ setTimeout(()=>map.invalidateSize(), 50); }
+  });
+});
+
+// ---------- KPI strip ----------
+(function renderKPI(){
+  const el = document.getElementById('kpiRow');
+  const items = [
+    {k:'Total PBP Dialokasikan (estimasi)', v: fmtNum(rekap.total_pbp_dialokasikan_estimasi), d:'basis realisasi Feb-Mar 2026'},
+    {k:'Total Beras Disalurkan (simulasi)', v: fmtNum(rekap.total_beras_kg_juli_sep_2026)+' kg', d: rekap.pangsa_terhadap_volume_nasional_persen+'% dari volume nasional 997.200 ton'},
+    {k:'Biaya Transporter -- Skenario A', v: fmtRpM(rekap.biaya_transporter_skenario_A_kontrak_tetap), d:'tarif kontrak Feb-Mar dipertahankan'},
+    {k:'vs Total Kontrak Feb-Mar 2026', v: '+'+rekap.perubahan_skenario_A_vs_feb_mar_persen+'%', d:'meski migor dihapus, volume 3 bulan lebih besar'},
+  ];
+  el.innerHTML = items.map(i=>`<div class="kpi"><div class="k">${i.k}</div><div class="v">${i.v}</div><div class="d">${i.d}</div></div>`).join('');
+})();
+
+// ---------- Scenario comparison bars ----------
+(function renderScenarios(){
+  const el = document.getElementById('scenarioBars');
+  const vals = [
+    {label:'Skenario A -- Kontrak tetap', v: rekap.biaya_transporter_skenario_A_kontrak_tetap, color:'var(--scenario-a)'},
+    {label:'A + Penyesuaian Kemarau', v: rekap.biaya_transporter_skenario_A_disesuaikan_kemarau, color:'var(--brand)'},
+    {label:'Skenario B -- Pola At-Cost Historis', v: rekap.biaya_transporter_skenario_B_pola_atcost_historis, color:'var(--scenario-b)'},
+    {label:'Skenario C -- Pasca-Koreksi APIP', v: rekap.biaya_transporter_skenario_C_pasca_koreksi_apip_historis, color:'var(--scenario-c)'},
+  ];
+  const max = Math.max(...vals.map(v=>v.v));
+  el.innerHTML = vals.map(v=>`
+    <div class="sbar-row">
+      <div class="sbar-label">${v.label}</div>
+      <div class="sbar-track"><div class="sbar-fill" style="width:${(v.v/max*100).toFixed(1)}%; background:${v.color};"></div></div>
+      <div class="sbar-val">${fmtRpM(v.v)}</div>
+    </div>`).join('');
+})();
+
+// ---------- Province tariff cards ----------
+(function renderProvCards(){
+  const el = document.getElementById('provCards');
+  const pp = DATA.province_params;
+  const provs = ['KALIMANTAN TIMUR','KALIMANTAN UTARA'];
+  el.innerHTML = provs.map(p=>{
+    const a = pp.prov_audit[p];
+    const short = p==='KALIMANTAN TIMUR'?'Kalimantan Timur':'Kalimantan Utara';
+    const tarif = pp.tarif_beras[p];
+    return `<div class="card">
+      <h3 style="font-size:15px;margin-bottom:10px;">${short}</h3>
+      <div class="popup-row">Tarif beras (Feb-Mar 2026, aktual): <b class="mono" style="color:var(--text)">Rp ${tarif.toLocaleString('id-ID',{maximumFractionDigits:2})}/kg</b></div>
+      <div class="popup-row">Selisih pengajuan at-cost vs kontrak: <b style="color:var(--risk-high)">${(a.overrun_ratio*100).toFixed(1)}%</b></div>
+      <div class="popup-row">Tersisa pasca-koreksi APIP (Pra): <b style="color:${a.retained_ratio_pra<0.15?'var(--risk-high)':'var(--risk-med)'}">${(a.retained_ratio_pra*100).toFixed(1)}%</b> dari pengajuan</div>
+      <div class="popup-row">Kelengkapan bukti pasca-konfirmasi: <b style="color:${a.completeness_ratio_pasca>0.9?'var(--risk-low)':'var(--risk-high)'}">${(a.completeness_ratio_pasca*100).toFixed(1)}%</b> terverifikasi</div>
+    </div>`;
+  }).join('');
+})();
+
+// ---------- Route table ----------
+let routeSort = {key:'skor_risiko', dir:-1};
+function renderRouteTable(){
+  const modaFilter = document.getElementById('filterModa').value;
+  const riskFilter = document.getElementById('filterRisk').value;
+  let rs = routes.filter(r=>{
+    if(modaFilter!=='all' && r.moda_angkutan.indexOf(modaFilter)<0) return false;
+    if(riskFilter!=='all' && r.kategori_risiko!==riskFilter) return false;
+    return true;
+  });
+  rs.sort((a,b)=>{
+    let av=a[routeSort.key], bv=b[routeSort.key];
+    if(typeof av==='string') return av.localeCompare(bv)*routeSort.dir;
+    return (av-bv)*routeSort.dir;
+  });
+  const tbody = document.getElementById('routeTbody');
+  tbody.innerHTML = rs.map(r=>{
+    const kemarau = r.penyesuaian_kemarau_elnino;
+    const kemarauCell = kemarau ? `<span class="pill sedang" title="${kemarau.catatan.replace(/"/g,'&quot;')}">${kemarau.level} (x${kemarau.multiplier.toFixed(2)})</span>` : '<span style="color:var(--text-faint)">--</span>';
+    return `<tr>
+      <td class="mono">${r.id}</td>
+      <td>${r.wilayah_label}</td>
+      <td>${r.vendor}</td>
+      <td>${pillModa(r.moda_angkutan)}</td>
+      <td>${pillRisk(r.kategori_risiko)}</td>
+      <td class="num">${fmtNum(r.pbp_alokasi_estimasi)}</td>
+      <td class="num">${fmtNum(r.beras_kg_simulasi_juli_sep_2026)}</td>
+      <td class="num">${fmtRp(r.biaya_transporter_skenario_A_kontrak_tetap)}</td>
+      <td class="num">${fmtRp(r.biaya_transporter_skenario_A_disesuaikan_kemarau)}</td>
+      <td>${kemarauCell}</td>
+      <td style="font-size:12px;">${r.jadwal_tahap_jul_sep_2026}${r.jadwal_cadangan_jul_sep_2026 ? `<br><span style="color:var(--text-faint);font-size:11px;">${r.jadwal_cadangan_jul_sep_2026}</span>` : ''}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('routeCount').textContent = rs.length + ' dari ' + routes.length + ' rute';
+}
+document.querySelectorAll('#routeTable thead th[data-key]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.key;
+    routeSort.dir = (routeSort.key===key) ? -routeSort.dir : -1;
+    routeSort.key = key;
+    renderRouteTable();
+  });
+});
+document.getElementById('filterModa').addEventListener('change', renderRouteTable);
+document.getElementById('filterRisk').addEventListener('change', renderRouteTable);
+renderRouteTable();
+
+// ---------- Leaflet map ----------
+let map = null;
+(function initMap(){
+  if(typeof L === 'undefined') return;
+  map = L.map('map', {scrollWheelZoom:false}).setView([1.6,116.8], 6.4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'&copy; OpenStreetMap contributors', maxZoom:18
+  }).addTo(map);
+  const riskColor = {Rendah:'#4C9A6E', Sedang:'#D6A23C', Tinggi:'#C24A3B'};
+  routes.forEach(r=>{
+    const color = riskColor[r.kategori_risiko] || '#5FA88B';
+    const kemarauNote = r.penyesuaian_kemarau_elnino ? `<div class="popup-row" style="color:#C24A3B">Penyesuaian kemarau: ${r.penyesuaian_kemarau_elnino.level} (x${r.penyesuaian_kemarau_elnino.multiplier})</div>` : '';
+    const marker = L.circleMarker([r.lat, r.lon], {
+      radius: 6 + Math.min(r.skor_risiko,10)*0.9,
+      color: color, weight:1.5, fillColor: color, fillOpacity:0.55
+    }).addTo(map);
+    marker.bindPopup(`
+      <div class="popup-title">${r.wilayah_label}</div>
+      <div class="popup-row">Vendor: ${r.vendor}</div>
+      <div class="popup-row">Moda: ${r.moda_angkutan}</div>
+      <div class="popup-row">Skor risiko: ${r.skor_risiko} (${r.kategori_risiko})</div>
+      <div class="popup-row">Beras simulasi Jul-Sep: ${fmtNum(r.beras_kg_simulasi_juli_sep_2026)} kg</div>
+      <div class="popup-row">Biaya Skenario A: ${fmtRp(r.biaya_transporter_skenario_A_kontrak_tetap)}</div>
+      ${kemarauNote}
+    `);
+  });
+})();
+
+// ---------- KDMP tables ----------
+(function renderKdmp(){
+  const kt = DATA.kdmp.kaltim;
+  const ku = DATA.kdmp.kaltara;
+  document.getElementById('kdmpKaltimTbody').innerHTML = kt.map(x=>`
+    <tr><td>${x.kab}</td><td class="num">${x.transaksi_2026_rp.toLocaleString('id-ID')}</td><td>${pillTier(x.tier_kesiapan)}</td><td style="font-size:12px;max-width:260px;">${x.catatan}</td></tr>
+  `).join('');
+  document.getElementById('kdmpKaltaraTbody').innerHTML = ku.map(x=>`
+    <tr><td>${x.kab}</td><td class="num">${x.nik_legalitas}</td><td class="num">${x.jumlah_desa}</td><td class="num">${(x.rasio_nik_desa*100).toFixed(1)}%</td><td>${pillTier(x.tier_kesiapan)}</td><td style="font-size:12px;max-width:220px;">${x.catatan}</td></tr>
+  `).join('');
+
+  const tiering = DATA.tiering_risiko_kesiapan;
+  document.getElementById('tieringTbody').innerHTML = tiering.map(t=>`
+    <tr><td>${t.kab}</td><td>${pillRisk(t.kategori_risiko)}</td><td class="num">${t.skor_risiko_maks}</td><td>${pillTier(t.tier_kesiapan_kdkmp)}</td><td>${pillProgTier(t.rekomendasi_program)}</td></tr>
+  `).join('');
+})();
+
+// ---------- Downloads ----------
+function downloadBlob(content, filename, type){
+  const blob = new Blob([content], {type});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function routesToCsv(){
+  const cols = ['id','provinsi','kabupaten_induk','wilayah_label','vendor','moda_angkutan','kategori_risiko','skor_risiko',
+    'pbp_alokasi_estimasi','beras_kg_simulasi_juli_sep_2026','tarif_kontrak_rp_per_kg',
+    'biaya_transporter_skenario_A_kontrak_tetap','biaya_transporter_skenario_A_disesuaikan_kemarau',
+    'biaya_transporter_skenario_B_pola_atcost_historis','biaya_transporter_skenario_C_pasca_koreksi_apip_historis',
+    'jadwal_tahap_jul_sep_2026','jadwal_cadangan_jul_sep_2026'];
+  const header = cols.join(',');
+  const rows = routes.map(r=>cols.map(c=>{
+    let v = r[c];
+    if(typeof v==='string' && v.indexOf(',')>=0) v = '"'+v+'"';
+    return v;
+  }).join(','));
+  return [header,...rows].join('\n');
+}
+document.getElementById('dlCsv').addEventListener('click', ()=>{
+  downloadBlob(routesToCsv(), 'simulasi_rute_jpl_kaltim_kaltara_jul_sep_2026.csv', 'text/csv');
+});
+document.getElementById('dlJson').addEventListener('click', ()=>{
+  downloadBlob(JSON.stringify(DATA, null, 2), 'dataset_simulasi_jpl_kdmp_kaltim_kaltara_jul_sep_2026.json', 'application/json');
+});
+
+</script>
+</body>
+</html>
